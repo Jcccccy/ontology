@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>数据自治平台 - 核心模块原型</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      /* 深邃的科技暗黑调 */
+      --bg-base: #05070a;
+      --bg-panel: #0a0e14;
+      --bg-panel-hover: #101620;
+      --border: #1a2433;
+      --border-light: #2a3a50;
+      
+      /* 文字颜色 */
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dark: #334155;
+      
+      /* 强调色 */
+      --accent-agent: #00f0ff;      /* 智能体青色 */
+      --accent-agent-dim: rgba(0, 240, 255, 0.1);
+      --accent-ontology: #b562ff;   /* 本体紫色 */
+      --accent-warn: #ffb000;       /* 警告琥珀色 */
+      --accent-warn-dim: rgba(255, 176, 0, 0.1);
+      --accent-success: #00ffa3;    /* 成功荧光绿 */
+      --accent-danger: #ff3864;     /* 危险霓虹红 */
+      
+      --font-sans: 'Noto Sans SC', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* 背景网格与噪点 */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      opacity: 0.03;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      z-index: 1;
+    }
+
+    /* 侧边导航栏 */
+    .sidebar {
+      width: 240px;
+      background: rgba(10, 14, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      position: relative;
+    }
+
+    .brand {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-agent);
+      box-shadow: 0 0 12px var(--accent-agent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .nav-menu {
+      flex: 1;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      padding: 12px 24px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+      font-weight: 500;
+    }
+
+    .nav-item:hover {
+      color: var(--text-main);
+      background: var(--bg-panel-hover);
+    }
+
+    .nav-item.active {
+      color: var(--accent-agent);
+      background: var(--accent-agent-dim);
+      border-left-color: var(--accent-agent);
+    }
+
+    .nav-badge {
+      background: var(--accent-warn);
+      color: #000;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .sys-status {
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .status-line.online { color: var(--accent-success); }
+
+    /* 主内容区 */
+    .main-content {
+      flex: 1;
+      position: relative;
+      z-index: 10;
+    }
+
+    .view {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .view.active {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    /* =========================================
+       模块 1：智能体控制台 (Agent Console)
+       ========================================= */
+    .agent-console {
+      display: flex;
+      width: 100%;
+    }
+
+    .chat-section {
+      width: 45%;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: rgba(5, 7, 10, 0.6);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-header {
+      height: 56px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      font-weight: 700;
+      color: var(--text-main);
+      background: rgba(0,0,0,0.2);
+    }
+
+    .chat-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 90%;
+    }
+
+    .msg-user {
+      align-self: flex-end;
+    }
+
+    .msg-user .bubble {
+      background: var(--border);
+      padding: 12px 16px;
+      border-radius: 8px 8px 0 8px;
+      border-right: 2px solid var(--text-muted);
+    }
+
+    .msg-agent {
+      align-self: flex-start;
+    }
+
+    .msg-agent .bubble {
+      background: var(--accent-agent-dim);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      padding: 16px;
+      border-radius: 8px 8px 8px 0;
+      border-left: 2px solid var(--accent-agent);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent-agent);
+    }
+
+    .chat-input-area {
+      padding: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-input {
+      width: 100%;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-light);
+      color: var(--text-main);
+      padding: 16px;
+      border-radius: 4px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent-agent);
+      box-shadow: 0 0 15px var(--accent-agent-dim);
+    }
+
+    .task-stream {
+      flex: 1;
+      padding: 40px;
+      background: radial-gradient(circle at center, rgba(10,14,20,0.8) 0%, rgba(5,7,10,0.9) 100%);
+      overflow-y: auto;
+    }
+
+    .stream-title {
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .pipeline {
+      position: relative;
+      padding-left: 24px;
+      border-left: 2px dashed var(--border-light);
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .pipeline-step {
+      position: relative;
+    }
+
+    .pipeline-step::before {
+      content: '';
+      position: absolute;
+      left: -31px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-light);
+    }
+
+    .pipeline-step.done::before {
+      background: var(--accent-success);
+      border-color: var(--accent-success);
+      box-shadow: 0 0 10px rgba(0, 255, 163, 0.4);
+    }
+
+    .pipeline-step.active::before {
+      background: var(--accent-agent);
+      border-color: var(--accent-agent);
+      box-shadow: 0 0 10px var(--accent-agent-dim);
+      animation: pulse 1.5s infinite;
+    }
+
+    .step-header {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .step-detail {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-panel);
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* =========================================
+       模块 2：数据审核队列 (Review Queue)
+       ========================================= */
+    .review-queue {
+      display: flex;
+      width: 100%;
+    }
+
+    .list-section {
+      width: 350px;
+      border-right: 1px solid var(--border);
+      background: rgba(10, 14, 20, 0.9);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filters {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-tag {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .filter-tag.active {
+      background: var(--accent-warn-dim);
+      color: var(--accent-warn);
+      border-color: var(--accent-warn);
+    }
+
+    .candidate-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .candidate-card {
+      padding: 20px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+    }
+
+    .candidate-card:hover {
+      background: var(--bg-panel-hover);
+    }
+
+    .candidate-card.selected {
+      background: rgba(255, 176, 0, 0.05);
+      border-left: 3px solid var(--accent-warn);
+    }
+
+    .cand-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .cand-type {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      background: rgba(181, 98, 255, 0.15);
+      color: var(--accent-ontology);
+      border-radius: 2px;
+      font-weight: normal;
+    }
+
+    .cand-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .cand-alert {
+      color: var(--accent-warn);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    .detail-section {
+      flex: 1;
+      padding: 40px;
+      overflow-y: auto;
+      background: rgba(5, 7, 10, 0.8);
+    }
+
+    .detail-header {
+      margin-bottom: 40px;
+    }
+
+    .detail-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    .source-link {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent-agent);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .source-link:hover { text-decoration: underline; }
+
+    .conflict-box {
+      background: rgba(255, 176, 0, 0.03);
+      border: 1px solid rgba(255, 176, 0, 0.2);
+      border-radius: 8px;
+      padding: 32px;
+      margin-bottom: 32px;
+    }
+
+    .conflict-title {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--accent-warn);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .conflict-title::before {
+      content: '';
+      display: block;
+      width: 16px;
+      height: 2px;
+      background: var(--accent-warn);
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .diff-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-light);
+      padding: 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .diff-card:hover {
+      border-color: var(--text-muted);
+    }
+
+    .diff-card.selected {
+      border-color: var(--accent-success);
+      background: rgba(0, 255, 163, 0.05);
+      box-shadow: 0 0 20px rgba(0, 255, 163, 0.1);
+    }
+
+    .diff-card.selected::after {
+      content: '✓ 采用此值';
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      color: var(--accent-success);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .diff-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .diff-value {
+      font-size: 18px;
+      color: #fff;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .diff-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dark);
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 16px;
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn {
+      padding: 14px 32px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn-approve {
+      background: var(--accent-success);
+      color: #000;
+    }
+
+    .btn-approve:hover {
+      box-shadow: 0 0 20px rgba(0, 255, 163, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-reject {
+      background: transparent;
+      border: 1px solid var(--accent-danger);
+      color: var(--accent-danger);
+    }
+
+    .btn-reject:hover {
+      background: rgba(255, 56, 100, 0.1);
+    }
+
+    .kbd {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      border: 1px solid currentColor;
+      padding: 2px 6px;
+      border-radius: 4px;
+      opacity: 0.7;
+    }
+
+    .nav-group-title {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dark);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 16px 24px 8px;
+      font-weight: 700;
+    }
+
+    /* Table Styles */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+    }
+    .data-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-main);
+    }
+    .table-row {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .table-row:hover {
+      background: var(--bg-panel-hover);
+    }
+    .table-row.selected {
+      background: rgba(0, 240, 255, 0.05);
+      border-left: 2px solid var(--accent-agent);
+    }
+    .type-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      color: var(--accent-ontology);
+    }
+
+    /* Lineage Styles */
+    .lineage-item {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .lineage-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .lineage-prop {
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .lineage-val {
+      font-weight: 700;
+      color: #fff;
+    }
+    .lineage-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    /* =========================================
+       模块 3：关系图谱 (Knowledge Graph)
+       ========================================= */
+    .graph-view {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: radial-gradient(circle at center, #0a111a 0%, var(--bg-base) 100%);
+    }
+
+    .graph-tools {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      background: rgba(10, 14, 20, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      width: 320px;
+      z-index: 20;
+    }
+
+    .search-box {
+      width: 100%;
+      background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      padding: 12px;
+      border-radius: 4px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .graph-stats {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* D3.js 图谱 SVG 样式 */
+    #graph-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .link {
+      stroke: var(--border-light);
+      stroke-width: 1.5px;
+      opacity: 0.6;
+    }
+
+    .link-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--accent-ontology);
+      pointer-events: none;
+    }
+
+    .node-circle {
+      stroke-width: 2px;
+      cursor: pointer;
+      transition: stroke-width 0.2s;
+    }
+
+    .node-circle:hover {
+      stroke-width: 4px;
+      stroke: #fff;
+    }
+
+    .node-label {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 700;
+      fill: #fff;
+      pointer-events: none;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    /* 动画 */
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 背景层 -->
+  <div class="grid-bg"></div>
+  <div class="noise"></div>
+
+  <!-- 侧边导航 -->
+  <nav class="sidebar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      数据自治平台
+    </div>
+    <div class="nav-menu">
+      <div class="nav-group-title">数据采集</div>
+      <div class="nav-item active" onclick="switchView('agent')">
+        <span>智能体控制台</span>
+      </div>
+      
+      <div class="nav-group-title">数据治理</div>
+      <div class="nav-item" onclick="switchView('review')">
+        <span>数据审核队列</span>
+        <span class="nav-badge">23</span>
+      </div>
+      <div class="nav-item" onclick="switchView('ontology')">
+        <span>本体模型管理</span>
+      </div>
+
+      <div class="nav-group-title">数据探索</div>
+      <div class="nav-item" onclick="switchView('browser')">
+        <span>对象数据大厅</span>
+      </div>
+      <div class="nav-item" onclick="switchView('graph')">
+        <span>关系图谱探索</span>
+      </div>
+
+      <div class="nav-group-title">业务操作</div>
+      <div class="nav-item" onclick="switchView('action')">
+        <span>动作与函数库</span>
+      </div>
+    </div>
+    <div class="sys-status">
+      <div class="status-line online">● 系统在线 (SYS.ONLINE)</div>
+      <div class="status-line">○ 智能体待机 (AGENT.IDLE)</div>
+      <div style="margin-top: 16px; color: var(--text-dark);">v1.0.0-MVP</div>
+    </div>
+  </nav>
+
+  <!-- 主内容区 -->
+  <main class="main-content">
+
+    <!-- 视图 1：智能体控制台 -->
+    <section id="view-agent" class="view active agent-console">
+      <div class="chat-section">
+        <div class="panel-header">终端 // 自然语言交互</div>
+        <div class="chat-history" id="chat-log">
+          <div class="msg msg-user">
+            <div class="bubble">帮我收集特朗普第二任期的内阁成员和核心顾问信息。</div>
+          </div>
+          <div class="msg msg-agent">
+            <div class="bubble">
+              > 意图解析：收集实体 [类型：人物, 组织] <br>
+              > 关联上下文："特朗普第二任期内阁/顾问"<br><br>
+              任务已下发至采集引擎，正在执行...
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" placeholder="输入自然语言指令 (例如：把马斯克标记为鹰派)...">
+        </div>
+      </div>
+      
+      <div class="task-stream">
+        <div class="stream-title">Agent 任务执行流 (Task Pipeline)</div>
+        <div class="pipeline">
+          <div class="pipeline-step done">
+            <div class="step-header">1. 规划爬取策略</div>
+            <div class="step-detail">
+              锁定白名单数据源：Wikipedia, 官方机构页面, WSJ.<br>
+              生成搜索关键词：15 组.
+            </div>
+          </div>
+          <div class="pipeline-step done">
+            <div class="step-header">2. 提取结构化数据</div>
+            <div class="step-detail">
+              已访问页面：32 / 32<br>
+              发现候选实体：45 个<br>
+              耗时：12.4s
+            </div>
+          </div>
+          <div class="pipeline-step done">
+            <div class="step-header">3. 推断本体结构与关系</div>
+            <div class="step-detail">
+              匹配已有 Object Type：人物 (38), 组织 (7)<br>
+              识别 Link Type：任命 (12), 盟友 (8), 商业伙伴 (3)
+            </div>
+          </div>
+          <div class="pipeline-step active">
+            <div class="step-header">4. 数据清洗与冲突检测</div>
+            <div class="step-detail" style="border-color: var(--accent-warn);">
+              发现 8 处属性冲突。<br>
+              发现 15 处低置信度提取。<br>
+              <span style="color: var(--accent-warn); margin-top: 8px; display: inline-block;">> 操作请求：23 个实体已进入审核队列，等待人工确认。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视图 2：数据审核队列 -->
+    <section id="view-review" class="view review-queue">
+      <div class="list-section">
+        <div class="panel-header">候选实体列表</div>
+        <div class="filters">
+          <button class="filter-tag">全部 (45)</button>
+          <button class="filter-tag active">属性冲突 (8)</button>
+          <button class="filter-tag">低置信度 (15)</button>
+        </div>
+        <div class="candidate-list">
+          <!-- Item 1 -->
+          <div class="candidate-card selected">
+            <div class="cand-title">
+              埃隆·马斯克
+              <span class="cand-type">对象：人物</span>
+            </div>
+            <div class="cand-meta">
+              置信度：0.82 | 来源：Wikipedia, WSJ
+            </div>
+            <div class="cand-alert">
+              ⚠ 属性冲突待解决
+            </div>
+          </div>
+          <!-- Item 2 -->
+          <div class="candidate-card">
+            <div class="cand-title">
+              马斯克 → 效率部
+              <span class="cand-type" style="color: var(--accent-success); background: rgba(0,255,163,0.1);">关系：任命至</span>
+            </div>
+            <div class="cand-meta">
+              置信度：0.95 | 来源：官方公告
+            </div>
+            <div class="cand-alert" style="color: var(--accent-success);">
+              + 发现新关系
+            </div>
+          </div>
+          <!-- Item 3 -->
+          <div class="candidate-card">
+            <div class="cand-title">
+              马可·卢比奥
+              <span class="cand-type">对象：人物</span>
+            </div>
+            <div class="cand-meta">
+              置信度：0.71 | 来源：News Media
+            </div>
+            <div class="cand-alert">
+              ⚠ 属性冲突待解决
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-header">
+          <span style="font-family: var(--font-mono); color: var(--accent-ontology); margin-bottom: 8px; display: block;">Object Type: Person</span>
+          <h2 class="detail-title">埃隆·马斯克 (Elon Musk)</h2>
+          <a href="#" class="source-link">↗ 查看 3 个原始网页切片</a>
+        </div>
+
+        <div class="conflict-box">
+          <div class="conflict-title">解决冲突字段：角色 / 职位 (Role)</div>
+          
+          <div class="diff-grid">
+            <div class="diff-card" onclick="selectCard(this)">
+              <div class="diff-label">现有数据 (来自本体库)</div>
+              <div class="diff-value">特斯拉、SpaceX CEO</div>
+              <div class="diff-meta">最后验证：2024-01-15</div>
+            </div>
+            
+            <div class="diff-card selected" onclick="selectCard(this)">
+              <div class="diff-label">新提取数据 (Agent 采集)</div>
+              <div class="diff-value">政府效率部 (DOGE) 负责人</div>
+              <div class="diff-meta">来源：WSJ (2024-11-13) | 置信度：0.98</div>
+            </div>
+          </div>
+          
+          <div class="diff-card" onclick="selectCard(this)" style="width: 100%;">
+            <div class="diff-label">智能合并策略 (Agent 建议)</div>
+            <div class="diff-value">保留双方，作为数组合并：<br>["特斯拉、SpaceX CEO", "政府效率部 (DOGE) 负责人"]</div>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); margin-bottom: 24px; padding: 16px; background: var(--bg-panel); border-radius: 4px;">
+          其他属性 (已自动合并，无冲突)：<br>
+          - 政治倾向：共和党 (已确认)<br>
+          - 净资产：$300B+ (已更新)
+        </div>
+
+        <div class="action-bar">
+          <button class="btn btn-approve">
+            批准入库 <span class="kbd">Y</span>
+          </button>
+          <button class="btn btn-reject">
+            拒绝修改 <span class="kbd">N</span>
+          </button>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: 12px;">
+            使用 <span class="kbd">J</span> <span class="kbd">K</span> 切换列表项
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视图 3：关系图谱探索 -->
+    <section id="view-graph" class="view graph-view">
+      <div class="graph-tools">
+        <input type="text" class="search-box" placeholder="自然语言查询图谱 (例：谁和马斯克有关系？)">
+        <div class="graph-stats">
+          <span id="node-count">当前节点：0</span>
+          <span id="edge-count">关系：0</span>
+          <span style="color: var(--accent-agent);">深度：2 跳</span>
+        </div>
+      </div>
+
+      <!-- D3.js SVG 容器 -->
+      <svg id="graph-svg"></svg>
+    </section>
+
+    <!-- 视图 4：本体模型管理 -->
+    <section id="view-ontology" class="view ontology-schema">
+      <!-- Left: Object Types List -->
+      <div class="list-section" style="width: 280px; border-right: 1px solid var(--border); background: rgba(10, 14, 20, 0.9);">
+        <div class="panel-header">Object Types (实体类型)</div>
+        <div class="candidate-list">
+          <div class="candidate-card selected">
+            <div class="cand-title">人物 (Person)</div>
+            <div class="cand-meta">属性: 12 | 关系: 5</div>
+          </div>
+          <div class="candidate-card">
+            <div class="cand-title">组织 (Organization)</div>
+            <div class="cand-meta">属性: 8 | 关系: 3</div>
+          </div>
+          <div class="candidate-card">
+            <div class="cand-title">事件 (Event)</div>
+            <div class="cand-meta">属性: 5 | 关系: 2</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right: Schema Detail & Agent Suggestions -->
+      <div class="detail-section" style="flex: 1; padding: 40px; overflow-y: auto; background: rgba(5, 7, 10, 0.8);">
+        <div class="detail-header" style="margin-bottom: 32px;">
+          <h2 class="detail-title" style="margin-bottom: 8px;">人物 (Person)</h2>
+          <span style="color: var(--text-muted);">定义现实世界中的个人实体及其基本社会属性。</span>
+        </div>
+
+        <div class="conflict-box" style="border-color: var(--accent-agent); background: var(--accent-agent-dim); margin-bottom: 48px;">
+          <div class="conflict-title" style="color: var(--accent-agent);">
+            <span style="display:inline-block; width:8px; height:8px; background:var(--accent-agent); border-radius:50%; margin-right:8px; animation: pulse 2s infinite;"></span>
+            Agent 建模建议 (基于最近 32 个页面的提取)
+          </div>
+          <div class="diff-grid">
+            <div class="diff-card">
+              <div class="diff-label">建议新增属性</div>
+              <div class="diff-value" style="font-size: 15px;">加密货币持仓 (Crypto_Holdings)</div>
+              <div class="diff-meta">类型: Array&lt;String&gt; | 发现频次: 14 次</div>
+            </div>
+            <div class="diff-card">
+              <div class="diff-label">建议新增关系 (Link Type)</div>
+              <div class="diff-value" style="font-size: 15px;">政治献金 (Donated_To) → 组织</div>
+              <div class="diff-meta">发现频次: 8 次</div>
+            </div>
+          </div>
+          <div class="action-bar" style="margin-top: 16px; padding-top: 24px;">
+            <button class="btn btn-approve" style="padding: 10px 20px; font-size: 14px;">采纳建议</button>
+            <button class="btn btn-reject" style="padding: 10px 20px; font-size: 14px;">忽略</button>
+          </div>
+        </div>
+
+        <h3 style="margin: 0 0 16px; font-size: 16px; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 12px;">现有属性 (Properties)</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>属性名</th><th>标识符</th><th>类型</th><th>描述</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>姓名</td><td>name</td><td><span class="type-badge">String</span></td><td>全名</td></tr>
+            <tr><td>职位</td><td>role</td><td><span class="type-badge">Array&lt;String&gt;</span></td><td>当前或曾任职位</td></tr>
+            <tr><td>政治倾向</td><td>political_party</td><td><span class="type-badge">Enum</span></td><td>所属党派或政治立场</td></tr>
+            <tr><td>净资产</td><td>net_worth</td><td><span class="type-badge">Number</span></td><td>估算净资产 (USD)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 视图 5：对象数据大厅 -->
+    <section id="view-browser" class="view object-browser">
+      <div class="table-section" style="flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: rgba(10, 14, 20, 0.6);">
+        <div class="panel-header" style="justify-content: space-between;">
+          <span>对象数据大厅</span>
+          <div class="filters" style="padding: 0; border: none;">
+            <button class="filter-tag active">人物</button>
+            <button class="filter-tag">组织</button>
+            <button class="filter-tag">事件</button>
+          </div>
+        </div>
+        <div style="padding: 16px; border-bottom: 1px solid var(--border);">
+          <input type="text" class="chat-input" placeholder="自然语言过滤 (例：净资产超过 10 亿的共和党人)..." style="padding: 12px; font-size: 13px;">
+        </div>
+        <div style="flex: 1; overflow: auto;">
+          <table class="data-table">
+            <thead>
+              <tr><th>姓名</th><th>职位</th><th>政治倾向</th><th>净资产</th><th>可信度</th></tr>
+            </thead>
+            <tbody>
+              <tr class="table-row selected"><td>埃隆·马斯克</td><td>DOGE 负责人</td><td>共和党</td><td>$300B+</td><td><span style="color:var(--accent-success)">0.98</span></td></tr>
+              <tr class="table-row"><td>J.D. 万斯</td><td>副总统候选人</td><td>共和党</td><td>$10M+</td><td><span style="color:var(--accent-success)">0.95</span></td></tr>
+              <tr class="table-row"><td>马可·卢比奥</td><td>国务卿提名</td><td>共和党</td><td>未知</td><td><span style="color:var(--accent-warn)">0.71</span></td></tr>
+              <tr class="table-row"><td>皮特·海格塞斯</td><td>国防部长提名</td><td>共和党</td><td>未知</td><td><span style="color:var(--accent-success)">0.92</span></td></tr>
+              <tr class="table-row"><td>小罗伯特·肯尼迪</td><td>卫生部长提名</td><td>独立</td><td>$15M</td><td><span style="color:var(--accent-success)">0.88</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="detail-section" style="width: 400px; flex: none; background: rgba(5, 7, 10, 0.95); padding: 32px; border-left: 1px solid var(--border);">
+        <div class="detail-header" style="margin-bottom: 32px;">
+          <span class="cand-type" style="display:inline-block; margin-bottom: 8px;">Object: Person</span>
+          <h2 class="detail-title" style="font-size: 28px; margin-bottom: 0;">埃隆·马斯克</h2>
+        </div>
+        
+        <h3 style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-mono);">字段级数据血缘 (Data Lineage)</h3>
+        
+        <div class="lineage-item">
+          <div class="lineage-header">
+            <span class="lineage-prop">职位 (Role)</span>
+            <span class="lineage-val">政府效率部 (DOGE) 负责人</span>
+          </div>
+          <div class="lineage-meta">
+            <div>来源: <a href="#" class="source-link" style="font-size: 11px;">WSJ (2024-11-13)</a></div>
+            <div>抓取时间: 2024-11-14 08:30:22</div>
+            <div>置信度: <span style="color: var(--accent-success);">0.98</span> (人工已确认)</div>
+          </div>
+        </div>
+
+        <div class="lineage-item">
+          <div class="lineage-header">
+            <span class="lineage-prop">政治倾向</span>
+            <span class="lineage-val">共和党</span>
+          </div>
+          <div class="lineage-meta">
+            <div>来源: <a href="#" class="source-link" style="font-size: 11px;">Wikipedia</a></div>
+            <div>抓取时间: 2024-10-01 12:00:00</div>
+            <div>置信度: <span style="color: var(--accent-success);">0.99</span> (多源交叉验证)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视图 6：动作与函数库 -->
+    <section id="view-action" class="view action-library">
+      <div style="padding: 40px; width: 100%; overflow-y: auto; background: rgba(5, 7, 10, 0.8);">
+        <h2 class="detail-title" style="margin-bottom: 40px;">业务动作与计算函数 (Actions & Functions)</h2>
+        
+        <h3 style="color: var(--accent-warn); margin-bottom: 24px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">▶ Actions (数据写操作)</h3>
+        <div class="diff-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); margin-bottom: 56px;">
+          <div class="diff-card">
+            <div class="diff-label">Action: 标记政治标签</div>
+            <div class="diff-value" style="font-size: 16px;">给人物打上"鹰派"或"鸽派"标签</div>
+            <div class="diff-meta">输入: 人物实体, 标签枚举<br>触发: UI 按钮 / 自然语言</div>
+            <button class="btn" style="margin-top: 20px; padding: 8px 16px; font-size: 12px; border: 1px solid var(--border-light); background: transparent; color: var(--text-main);">测试执行</button>
+          </div>
+          <div class="diff-card">
+            <div class="diff-label">Action: 生成关系简报</div>
+            <div class="diff-value" style="font-size: 16px;">调用 LLM 生成人物关系分析报告</div>
+            <div class="diff-meta">输入: 实体集合<br>副作用: 生成 PDF 存入文档库</div>
+            <button class="btn" style="margin-top: 20px; padding: 8px 16px; font-size: 12px; border: 1px solid var(--border-light); background: transparent; color: var(--text-main);">测试执行</button>
+          </div>
+          <div class="diff-card">
+            <div class="diff-label">Action: 触发数据刷新</div>
+            <div class="diff-value" style="font-size: 16px;">派遣 Agent 重新爬取最新数据</div>
+            <div class="diff-meta">输入: Object Type 或具体对象<br>触发: 定时任务 / 自然语言</div>
+            <button class="btn" style="margin-top: 20px; padding: 8px 16px; font-size: 12px; border: 1px solid var(--border-light); background: transparent; color: var(--text-main);">测试执行</button>
+          </div>
+        </div>
+
+        <h3 style="color: var(--accent-ontology); margin-bottom: 24px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">ƒ Functions (只读计算逻辑)</h3>
+        <div class="diff-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+          <div class="diff-card">
+            <div class="diff-label">Function: 查找关联路径</div>
+            <div class="diff-value" style="font-size: 16px;">在关系图中查找 A 到 B 的所有路径</div>
+            <div class="diff-meta">输入: 实体A, 实体B<br>返回: Path[] (≤3跳)</div>
+          </div>
+          <div class="diff-card">
+            <div class="diff-label">Function: 计算影响力指数</div>
+            <div class="diff-value" style="font-size: 16px;">基于关系拓扑计算核心节点权重</div>
+            <div class="diff-meta">输入: 网络子图<br>返回: 排序后的 Entity[]</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // 视图切换逻辑
+    function switchView(viewId) {
+      // 更新导航栏状态
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      // 更新视图状态
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.getElementById('view-' + viewId).classList.add('active');
+
+      if (viewId === 'graph' && !window.graphInitialized) {
+        initGraph();
+        window.graphInitialized = true;
+      }
+    }
+
+    // 审核队列卡片选择逻辑
+    function selectCard(element) {
+      // 移除同级容器内其他卡片的选中状态
+      const container = element.closest('.conflict-box');
+      container.querySelectorAll('.diff-card').forEach(el => el.classList.remove('selected'));
+      // 添加当前选中状态
+      element.classList.add('selected');
+    }
+
+    // 初始化 D3.js 关系图谱
+    function initGraph() {
+      const nodesData = [
+        { id: "Trump", label: "特朗普", group: 1, radius: 45 },
+        { id: "Musk", label: "马斯克", group: 2, radius: 35 },
+        { id: "Vance", label: "万斯", group: 3, radius: 35 },
+        { id: "Rubio", label: "卢比奥", group: 3, radius: 30 },
+        { id: "Pompeo", label: "蓬佩奥", group: 3, radius: 28 },
+        { id: "RFK", label: "小肯尼迪", group: 3, radius: 30 },
+        { id: "Hegseth", label: "海格塞斯", group: 3, radius: 28 },
+        { id: "Gabbard", label: "加巴德", group: 3, radius: 28 },
+        { id: "Ramaswamy", label: "拉马斯瓦米", group: 2, radius: 30 },
+        { id: "Thiel", label: "蒂尔", group: 2, radius: 28 },
+        { id: "Carlson", label: "卡尔森", group: 4, radius: 25 },
+        { id: "Bannon", label: "班农", group: 4, radius: 25 },
+        { id: "McMahon", label: "麦克马洪", group: 3, radius: 25 },
+        { id: "Lutnick", label: "卢特尼克", group: 2, radius: 25 }
+      ];
+
+      const linksData = [
+        { source: "Trump", target: "Musk", label: "盟友 / DOGE" },
+        { source: "Trump", target: "Vance", label: "副总统" },
+        { source: "Trump", target: "Rubio", label: "国务卿提名" },
+        { source: "Trump", target: "Pompeo", label: "前国务卿" },
+        { source: "Trump", target: "RFK", label: "卫生部长提名" },
+        { source: "Trump", target: "Hegseth", label: "国防部长提名" },
+        { source: "Trump", target: "Gabbard", label: "情报总监提名" },
+        { source: "Musk", target: "Ramaswamy", label: "DOGE 联席" },
+        { source: "Trump", target: "Ramaswamy", label: "盟友" },
+        { source: "Vance", target: "Thiel", label: "投资 / 导师" },
+        { source: "Musk", target: "Thiel", label: "PayPal 黑帮" },
+        { source: "Trump", target: "Carlson", label: "媒体盟友" },
+        { source: "Trump", target: "Bannon", label: "前战略师" },
+        { source: "Trump", target: "McMahon", label: "教育部长提名" },
+        { source: "Trump", target: "Lutnick", label: "商务部长提名" },
+        { source: "Musk", target: "Lutnick", label: "过渡团队合作" }
+      ];
+
+      document.getElementById('node-count').innerText = `当前节点：${nodesData.length}`;
+      document.getElementById('edge-count').innerText = `关系：${linksData.length}`;
+
+      const svg = d3.select("#graph-svg");
+      const width = svg.node().getBoundingClientRect().width;
+      const height = svg.node().getBoundingClientRect().height;
+
+      // 定义发光滤镜
+      const defs = svg.append("defs");
+      const filter = defs.append("filter").attr("id", "glow");
+      filter.append("feGaussianBlur").attr("stdDeviation", "4").attr("result", "coloredBlur");
+      const feMerge = filter.append("feMerge");
+      feMerge.append("feMergeNode").attr("in", "coloredBlur");
+      feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+      // 颜色映射
+      const colorMap = {
+        1: "var(--accent-warn)",    // 核心
+        2: "var(--accent-agent)",   // 科技/商业
+        3: "var(--accent-ontology)",// 政治/内阁
+        4: "var(--accent-danger)"   // 媒体/其他
+      };
+
+      const simulation = d3.forceSimulation(nodesData)
+        .force("link", d3.forceLink(linksData).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-800))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide().radius(d => d.radius + 10));
+
+      // 绘制连线
+      const link = svg.append("g")
+        .selectAll("line")
+        .data(linksData)
+        .join("line")
+        .attr("class", "link");
+
+      // 绘制连线标签组
+      const linkLabelGroup = svg.append("g")
+        .selectAll("g")
+        .data(linksData)
+        .join("g");
+
+      const linkLabelBg = linkLabelGroup.append("rect")
+        .attr("fill", "var(--bg-base)")
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .style("stroke", "var(--border)")
+        .style("stroke-width", "1px");
+
+      const linkLabel = linkLabelGroup.append("text")
+        .attr("class", "link-label")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .text(d => d.label);
+
+      // 绘制节点组
+      const node = svg.append("g")
+        .selectAll("g")
+        .data(nodesData)
+        .join("g")
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+      // 节点圆圈
+      node.append("circle")
+        .attr("class", "node-circle")
+        .attr("r", d => d.radius)
+        .attr("fill", "var(--bg-panel)")
+        .attr("stroke", d => colorMap[d.group])
+        .style("filter", "url(#glow)");
+
+      // 节点文本
+      node.append("text")
+        .attr("class", "node-label")
+        .text(d => d.label);
+
+      // 交互：Hover 效果
+      node.on("mouseover", function(event, d) {
+        d3.select(this).select("circle").attr("stroke", "#fff");
+        link.style("opacity", l => (l.source.id === d.id || l.target.id === d.id) ? 0.8 : 0.1);
+        linkLabelGroup.style("opacity", l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.1);
+      }).on("mouseout", function(event, d) {
+        d3.select(this).select("circle").attr("stroke", d => colorMap[d.group]);
+        link.style("opacity", 0.6);
+        linkLabelGroup.style("opacity", 1);
+      });
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+
+        node
+          .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        linkLabelGroup.attr("transform", d => `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2})`);
+      });
+
+      // 动态更新标签背景框的大小和位置 (只需执行一次)
+      setTimeout(() => {
+        linkLabelBg.each(function(d) {
+          const textNode = this.nextSibling;
+          if (textNode) {
+            const bbox = textNode.getBBox();
+            d3.select(this)
+              .attr("x", bbox.x - 6)
+              .attr("y", bbox.y - 3)
+              .attr("width", bbox.width + 12)
+              .attr("height", bbox.height + 6);
+          }
+        });
+      }, 50);
+
+      function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+      
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+      
+      function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
+    }
+  </script>
+</body>
+</html>

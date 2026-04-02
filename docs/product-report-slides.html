@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>数据自治平台 — 产品报告幻灯片</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #0a0908;
+      --bg1: #141210;
+      --ink: #ede6dc;
+      --muted: #9a9288;
+      --acc: #d97857;
+      --acc2: #6bb8a8;
+      --line: rgba(237, 230, 220, 0.12);
+      --glow: rgba(217, 120, 87, 0.35);
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Manrope", system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg0);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: clamp(15px, 1.35vw, 18px);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .deck {
+      position: relative;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .grain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.07;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+      z-index: 1000;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.5rem, 5vw, 5rem);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px) scale(0.985);
+      transition:
+        opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        visibility 0.55s;
+      background:
+        radial-gradient(120% 80% at 85% 10%, rgba(217, 120, 87, 0.09), transparent 55%),
+        radial-gradient(90% 70% at 5% 95%, rgba(107, 184, 168, 0.07), transparent 50%),
+        linear-gradient(165deg, var(--bg0), var(--bg1));
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    .slide-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .kicker {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--acc);
+      font-weight: 600;
+      margin-bottom: 1rem;
+      animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2rem, 5.2vw, 3.6rem);
+      line-height: 1.08;
+      margin: 0 0 1.25rem;
+      letter-spacing: -0.02em;
+      animation: fadeUp 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(1.5rem, 3.2vw, 2.35rem);
+      margin: 0 0 1rem;
+      letter-spacing: -0.02em;
+      animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+    }
+
+    .lead {
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      color: var(--muted);
+      max-width: 42em;
+      animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+    }
+
+    .pullquote {
+      font-family: var(--font-display);
+      font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+      border-left: 3px solid var(--acc2);
+      padding-left: 1.25rem;
+      margin: 1.5rem 0;
+      color: var(--ink);
+      animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+    }
+
+    ul.points {
+      margin: 0.5rem 0 0;
+      padding-left: 1.15rem;
+      color: var(--muted);
+      animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    }
+
+    ul.points li {
+      margin: 0.45rem 0;
+    }
+
+    ul.points li strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+    }
+
+    table.data th,
+    table.data td {
+      border: 1px solid var(--line);
+      padding: 0.55rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.data th {
+      background: rgba(237, 230, 220, 0.04);
+      color: var(--acc2);
+      font-weight: 600;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      background: rgba(237, 230, 220, 0.03);
+      animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      font-family: var(--font-display);
+      color: var(--acc);
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    pre.ascii {
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      font-size: clamp(0.62rem, 1.15vw, 0.78rem);
+      line-height: 1.35;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      color: #c8c2b8;
+      margin: 1rem 0 0;
+      animation: fadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .pill strong {
+      color: var(--acc2);
+      font-weight: 600;
+    }
+
+    .toolbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem clamp(1rem, 3vw, 2rem);
+      background: linear-gradient(0deg, rgba(10, 9, 8, 0.92), transparent);
+      pointer-events: none;
+    }
+
+    .toolbar * {
+      pointer-events: auto;
+    }
+
+    .nav-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .dots {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 55vw;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--line);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .dot:hover {
+      transform: scale(1.2);
+      background: var(--muted);
+    }
+
+    .dot.on {
+      background: var(--acc);
+      box-shadow: 0 0 12px var(--glow);
+    }
+
+    .counter {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .counter span {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .hit {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      width: 22%;
+      z-index: 50;
+      cursor: pointer;
+    }
+
+    .hit.prev {
+      left: 0;
+    }
+
+    .hit.next {
+      right: 0;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hit {
+        width: 18%;
+      }
+      table.data {
+        font-size: 0.72rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="hit prev" id="hitPrev" title="上一页" role="button" tabindex="0"></div>
+  <div class="hit next" id="hitNext" title="下一页" role="button" tabindex="0"></div>
+
+  <div class="deck" id="deck">
+    <!-- 1 -->
+    <section class="slide active" data-title="封面">
+      <div class="slide-inner">
+        <div class="kicker">Ontology Platform</div>
+        <h1>数据自治平台<br />产品报告</h1>
+        <p class="lead">以本体为骨架，以智能体为引擎，让数据自己生长、自己组织、自己服务。</p>
+        <div class="pill-row">
+          <span class="pill"><strong>→</strong> 键盘 ← →</span>
+          <span class="pill"><strong>Home / End</strong> 首尾页</span>
+          <span class="pill">点击左右边缘翻页</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="slide" data-title="定位">
+      <div class="slide-inner">
+        <div class="kicker">一、平台定位</div>
+        <h2>智能数据操作系统</h2>
+        <p class="lead">以<strong style="color:var(--ink)">本体（Ontology）</strong>为核心数据模型，融合 Palantir Foundry 的本体驱动架构与 AI Agent 的自主采集能力。</p>
+        <ul class="points">
+          <li>自然语言描述需求 → Agent 自动获取数据</li>
+          <li>统一语义模型理解与展示全部数据</li>
+          <li>Action / Function 在数据之上构建业务操作</li>
+          <li>为上层 AI 应用与智能体平台提供标准化数据底座</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide" data-title="一句话">
+      <div class="slide-inner">
+        <div class="kicker">定位公式</div>
+        <p class="pullquote">Foundry 的本体能力 + AI Agent 的自主性 = 数据不再需要人搬运。</p>
+        <p class="lead">目标：从「人找数据、人搬数据」转向「意图驱动、语义一致、可操作的统一层」。</p>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" data-title="本体">
+      <div class="slide-inner">
+        <div class="kicker">二、核心概念 · 本体</div>
+        <h2>数据的骨架，不是数据本身</h2>
+        <p class="lead">定义 Object Type、属性、Link；描述「世界长什么样」。支持<strong style="color:var(--ink)">人工预定义</strong>与<strong style="color:var(--ink)">Agent 推断</strong>混合：先推断草案 → 人工审核固化。</p>
+        <table class="data">
+          <thead>
+            <tr>
+              <th>方式</th>
+              <th>场景</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>人工预定义</td><td>领域模型清晰、需严格管控</td></tr>
+            <tr><td>Agent 推断</td><td>探索性分析、快速原型</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide" data-title="Schema 演进">
+      <div class="slide-inner">
+        <div class="kicker">本体 · Schema 演进</div>
+        <h2>变更策略（版本可追溯）</h2>
+        <table class="data">
+          <thead>
+            <tr><th>变更</th><th>处理</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>新增属性</td><td>历史对象为 null，不破坏存量</td></tr>
+            <tr><td>属性重命名</td><td>别名映射，旧名仍有效，后台迁移</td></tr>
+            <tr><td>删除属性</td><td>deprecated + 归档，不立刻删数据</td></tr>
+            <tr><td>新增 Link</td><td>对历史无影响</td></tr>
+            <tr><td>改属性类型</td><td>需人工确认 + 迁移脚本</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide" data-title="Agent">
+      <div class="slide-inner">
+        <div class="kicker">核心概念 · Agent</div>
+        <h2>自主数据采集引擎</h2>
+        <p class="lead">意图 → 规划策略 → 爬取与结构化 → 对齐本体 → 清洗去重 → 写入本体。</p>
+        <div class="grid-2">
+          <div class="card" style="animation-delay:0.1s"><h3>通用爬取</h3><p>URL 或搜索意图 → 结构化抽取</p></div>
+          <div class="card" style="animation-delay:0.14s"><h3>本体对齐</h3><p>映射已有本体或建议新结构</p></div>
+          <div class="card" style="animation-delay:0.18s"><h3>增量更新</h3><p>定期重访，变化自动入库</p></div>
+          <div class="card" style="animation-delay:0.22s"><h3>多源融合</h3><p>跨站点实体合并与去重</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide" data-title="Action / Function">
+      <div class="slide-inner">
+        <div class="kicker">Action &amp; Function</div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Action — 操作手</h3>
+            <p>定义「能对数据做什么」：创建 Link、生成报告、触发刷新等。支持 UI、定时任务、<strong style="color:var(--ink)">自然语言</strong>触发。</p>
+          </div>
+          <div class="card">
+            <h3>Function — 计算器</h3>
+            <p>只读计算：市场集中度（HHI）、关联路径、相似实体推荐等，返回派生结果，不改库存数据。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide" data-title="功能全景 · 采集与本体">
+      <div class="slide-inner">
+        <div class="kicker">三、功能全景</div>
+        <h2>采集层 &amp; 本体层</h2>
+        <div class="grid-2">
+          <div class="card"><h3>采集</h3><p>意图驱动、URL 定向、API、文件导入、定时刷新、采集监控与质量评分。</p></div>
+          <div class="card"><h3>本体</h3><p>可视化编辑器、Agent 辅助建模、版本管理、Schema 演进、模板库、字段级血缘（来源/时间/置信度）。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide" data-title="功能全景 · 展示与操作">
+      <div class="slide-inner">
+        <div class="kicker">功能全景（续）</div>
+        <h2>展示层 &amp; 业务操作 &amp; 治理</h2>
+        <div class="grid-2">
+          <div class="card"><h3>展示</h3><p>对象详情、关系图谱、列表/表格、时间线、仪表盘、自然语言查询。</p></div>
+          <div class="card"><h3>操作</h3><p>Action 定义与执行、NL 触发、批量、审计、权限、工作流编排。</p></div>
+          <div class="card"><h3>治理</h3><p>字段级血缘、可信度评分、人工审核队列、变更历史、敏感度分级。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide" data-title="架构">
+      <div class="slide-inner">
+        <div class="kicker">四、架构位置</div>
+        <h2>数据基础设施层</h2>
+        <p class="lead">上层行业研究 / 风控 / 供应链 / AI 智能体 → <strong style="color:var(--acc2)">REST / SDK / MCP</strong> → 本体 + Agent + Action/Function → 存储（PostgreSQL、Neo4j、向量、对象存储）→ 外部数据源。</p>
+        <pre class="ascii"> 行业研究   风险监控   供应链    AI 智能体
+     \        |        /        /
+      --- REST API / SDK / MCP ---
+              Ontology Platform
+   Ontology | Agent | Action/Function
+   PostgreSQL · Neo4j · Vector · Object Store
+              互联网 / 外部数据</pre>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide" data-title="赋能上层">
+      <div class="slide-inner">
+        <div class="kicker">赋能方式</div>
+        <h2>统一底座 · 即插即用 · 降本 · 联动 · AI</h2>
+        <ul class="points">
+          <li><strong>统一数据底座</strong>：多上层平台共享同一 Object 定义，消除「同实体多 Schema」</li>
+          <li><strong>API 能力</strong>：查询对象、触发 Action、执行 Function、派遣 Agent、路径查询、变更订阅</li>
+          <li><strong>成本</strong>：数据层开发常见占总工作量 40–60%；接入后有望降至约 10–15%</li>
+          <li><strong>跨平台联动</strong>：基于同一本体的变更事件，减少点对点定制对接</li>
+          <li><strong>AI 工具集</strong>：search / detail / path / collect / action / function；支持 MCP</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide" data-title="典型场景">
+      <div class="slide-inner">
+        <div class="kicker">五、典型场景</div>
+        <div class="grid-2">
+          <div class="card"><h3>竞争情报</h3><p>持续追踪 Top N 公司；动态、融资、关系图谱与 NL 问数。</p></div>
+          <div class="card"><h3>供应链映射</h3><p>多层供应商展开、地理与品类分布、中断影响路径分析。</p></div>
+          <div class="card"><h3>学术网络</h3><p>论文/作者/机构本体；合著与引用；影响力与合作紧密度 Function。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="slide" data-title="技术指标">
+      <div class="slide-inner">
+        <div class="kicker">六、核心技术指标（目标）</div>
+        <table class="data">
+          <tbody>
+            <tr><th>Agent 结构化准确率</th><td>≥ 85%</td></tr>
+            <tr><th>本体推断准确率</th><td>≥ 75%</td></tr>
+            <tr><th>自然语言查询</th><td>≥ 90%</td></tr>
+            <tr><th>刷新延迟（定时）</th><td>≤ 24h</td></tr>
+            <tr><th>单对象 API</th><td>≤ 200ms</td></tr>
+            <tr><th>图谱 ≤3 跳</th><td>≤ 2s</td></tr>
+            <tr><th>规模</th><td>千万对象 / 亿级关系</td></tr>
+            <tr><th>并发 Agent / 批量写入 / NL QPS</th><td>≥10 / ≥1000 对象·min⁻¹ / ≥50</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 14 -->
+    <section class="slide" data-title="与 Foundry 对比">
+      <div class="slide-inner">
+        <div class="kicker">七、差异化（ vs Palantir Foundry ）</div>
+        <table class="data">
+          <thead><tr><th>维度</th><th>差异要点</th></tr></thead>
+          <tbody>
+            <tr><td>数据获取</td><td>企业对接为主 vs <strong style="color:var(--ink)">Agent 自主采集</strong> + 传统对接</td></tr>
+            <tr><td>建模 / 操作</td><td>偏人工、代码 vs <strong style="color:var(--ink)">人工 + Agent 建议</strong>、NL 触发 Action</td></tr>
+            <tr><td>门槛与范围</td><td>重型企业 vs 轻量启动；内外部数据并重</td></tr>
+            <tr><td>AI 集成</td><td>无原生 Agent 工具 vs <strong style="color:var(--ink)">MCP + Tool</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 15 -->
+    <section class="slide" data-title="总结">
+      <div class="slide-inner">
+        <div class="kicker">八、总结</div>
+        <p class="pullquote">告诉 Agent 你要什么 — 数据自己来、自己组织、自己关联；上层少造轮子；AI 通过 MCP 操作真实数据。</p>
+        <div class="pill-row">
+          <span class="pill"><strong>本体驱动</strong></span>
+          <span class="pill"><strong>Agent 自治</strong></span>
+          <span class="pill"><strong>语义互通</strong></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <span class="nav-hint">← 上一页 · 下一页 →</span>
+    <div class="dots" id="dots"></div>
+    <span class="counter"><span id="cur">1</span> / <span id="total">15</span></span>
+  </div>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const deck = document.getElementById("deck");
+      const dotsEl = document.getElementById("dots");
+      const curEl = document.getElementById("cur");
+      const totalEl = document.getElementById("total");
+      let idx = 0;
+
+      totalEl.textContent = String(slides.length);
+
+      slides.forEach((_, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "dot" + (i === 0 ? " on" : "");
+        b.setAttribute("aria-label", "第 " + (i + 1) + " 页");
+        b.addEventListener("click", () => go(i));
+        dotsEl.appendChild(b);
+      });
+
+      const dots = () => Array.from(dotsEl.querySelectorAll(".dot"));
+
+      function go(n) {
+        idx = Math.max(0, Math.min(slides.length - 1, n));
+        slides.forEach((s, i) => s.classList.toggle("active", i === idx));
+        dots().forEach((d, i) => d.classList.toggle("on", i === idx));
+        curEl.textContent = String(idx + 1);
+        const t = slides[idx].getAttribute("data-title") || "";
+        document.title = t ? t + " — Ontology Platform" : "数据自治平台 — 产品报告幻灯片";
+      }
+
+      function next() {
+        go(idx + 1);
+      }
+      function prev() {
+        go(idx - 1);
+      }
+
+      document.getElementById("hitNext").addEventListener("click", next);
+      document.getElementById("hitPrev").addEventListener("click", prev);
+
+      ["hitNext", "hitPrev"].forEach((id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            el.click();
+          }
+        });
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+          e.preventDefault();
+          next();
+        } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+          e.preventDefault();
+          prev();
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          go(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          go(slides.length - 1);
+        }
+      });
+
+      let tx = 0;
+      deck.addEventListener(
+        "touchstart",
+        (e) => {
+          tx = e.changedTouches[0].screenX;
+        },
+        { passive: true }
+      );
+      deck.addEventListener(
+        "touchend",
+        (e) => {
+          const dx = e.changedTouches[0].screenX - tx;
+          if (dx > 50) prev();
+          else if (dx < -50) next();
+        },
+        { passive: true }
+      );
+    })();
+  </script>
+</body>
+</html>

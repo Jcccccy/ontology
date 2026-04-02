@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>数据自治平台 MVP — 实施报告幻灯片</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Mulish:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #050809;
+      --bg1: #0c1218;
+      --ink: #e4edf2;
+      --muted: #8a9bab;
+      --acc: #34d3c9;
+      --acc2: #f0b429;
+      --line: rgba(228, 237, 242, 0.11);
+      --glow: rgba(52, 211, 201, 0.35);
+      --font-display: "Cormorant Garamond", "Georgia", serif;
+      --font-body: "Mulish", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg0);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: clamp(15px, 1.35vw, 18px);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .deck { position: relative; height: 100vh; width: 100%; overflow: hidden; }
+
+    .grid-bg {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 48px 48px;
+      z-index: 500;
+    }
+
+    .grain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.055;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+      z-index: 1000;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.5rem, 5vw, 5rem);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(18px);
+      transition:
+        opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        visibility 0.5s;
+      background:
+        radial-gradient(100% 70% at 0% 0%, rgba(52, 211, 201, 0.07), transparent 55%),
+        radial-gradient(80% 60% at 100% 100%, rgba(240, 180, 41, 0.06), transparent 45%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+    }
+
+    .slide-inner { max-width: 1040px; margin: 0 auto; width: 100%; }
+
+    .kicker {
+      font-size: 0.68rem;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--acc);
+      font-weight: 700;
+      margin-bottom: 0.85rem;
+      animation: rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2.1rem, 5vw, 3.5rem);
+      line-height: 1.06;
+      margin: 0 0 1.1rem;
+      letter-spacing: -0.015em;
+      animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(1.45rem, 3vw, 2.25rem);
+      margin: 0 0 0.85rem;
+      letter-spacing: -0.01em;
+      animation: rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+    }
+
+    .lead {
+      font-size: clamp(1.02rem, 1.9vw, 1.28rem);
+      color: var(--muted);
+      max-width: 44em;
+      animation: rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+    }
+
+    .star {
+      color: var(--acc2);
+      font-weight: 700;
+    }
+
+    ul.points {
+      margin: 0.4rem 0 0;
+      padding-left: 1.1rem;
+      color: var(--muted);
+      animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+    }
+
+    ul.points li { margin: 0.4rem 0; }
+    ul.points li strong { color: var(--ink); font-weight: 700; }
+
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 0.85rem;
+      animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+    }
+
+    table.data th,
+    table.data td {
+      border: 1px solid var(--line);
+      padding: 0.5rem 0.6rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.data th {
+      background: rgba(228, 237, 242, 0.035);
+      color: var(--acc);
+      font-weight: 700;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.85rem;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      background: rgba(228, 237, 242, 0.025);
+      animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 0.95rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--acc2);
+    }
+
+    .card p { margin: 0; font-size: 0.86rem; color: var(--muted); }
+
+    pre.ascii {
+      font-family: ui-monospace, "SF Mono", monospace;
+      font-size: clamp(0.58rem, 1.05vw, 0.74rem);
+      line-height: 1.32;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.85rem;
+      overflow-x: auto;
+      color: #b8c5ce;
+      margin: 0.75rem 0 0;
+      animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.9rem;
+      animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+    }
+
+    .pill {
+      font-size: 0.74rem;
+      padding: 0.32rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .pill strong { color: var(--acc); font-weight: 700; }
+
+    .toolbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem clamp(1rem, 3vw, 2rem);
+      background: linear-gradient(0deg, rgba(5, 8, 9, 0.94), transparent);
+      pointer-events: none;
+    }
+
+    .toolbar * { pointer-events: auto; }
+
+    .nav-hint {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .dots {
+      display: flex;
+      gap: 0.32rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 52vw;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--line);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .dot:hover { transform: scale(1.2); background: var(--muted); }
+    .dot.on { background: var(--acc); box-shadow: 0 0 12px var(--glow); }
+
+    .counter {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .counter span { color: var(--ink); font-weight: 700; }
+
+    .hit {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      width: 22%;
+      z-index: 50;
+      cursor: pointer;
+    }
+
+    .hit.prev { left: 0; }
+    .hit.next { right: 0; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .hit { width: 18%; }
+      table.data { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="hit prev" id="hitPrev" title="上一页" role="button" tabindex="0"></div>
+  <div class="hit next" id="hitNext" title="下一页" role="button" tabindex="0"></div>
+
+  <div class="deck" id="deck">
+    <section class="slide active" data-title="封面">
+      <div class="slide-inner">
+        <div class="kicker">MVP · Implementation</div>
+        <h1>数据自治平台<br />MVP 实施报告</h1>
+        <p class="lead"><strong style="color:var(--ink)">1 人 + AI</strong> 开发；公开政治人物关系网络（特朗普核心圈样例）验证 <strong style="color:var(--acc)">Agent → 本体 → 图谱</strong> 主链路。</p>
+        <div class="pill-row">
+          <span class="pill"><strong>← →</strong> 键盘翻页</span>
+          <span class="pill"><strong>Home / End</strong> 首尾</span>
+          <span class="pill">左右边缘轻触 / 滑动</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="范围">
+      <div class="slide-inner">
+        <div class="kicker">一、MVP 范围</div>
+        <h2>做什么 · 不做什么</h2>
+        <table class="data">
+          <thead><tr><th>做</th><th>不做</th></tr></thead>
+          <tbody>
+            <tr><td>单用户本地；<span class="star">Agent 爬取不简化</span></td><td>多用户/权限</td></tr>
+            <tr><td>Agent 推断本体；本体驱动展示</td><td>拖拽本体编辑器</td></tr>
+            <tr><td>Action &amp; Function 基础</td><td>复杂工作流、批量/审计</td></tr>
+            <tr><td>NL 查询；关系图谱</td><td>仪表盘、时间线、本体版本管理</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide" data-title="场景">
+      <div class="slide-inner">
+        <div class="kicker">验证场景</div>
+        <h2>公开政治人物关系网络</h2>
+        <p class="lead">典型流：<strong style="color:var(--ink)">自然语言意图</strong> → Agent 搜索/爬取 → 结构化提取 → 推断本体 → <strong style="color:var(--acc2)">用户确认</strong> → 列表/图谱/NL 深挖。</p>
+        <ul class="points">
+          <li>例：整理特朗普核心圈；问「经济政策顾问是谁？」；梳理马斯克—特朗普关系链</li>
+          <li>Action：标记鹰派、生成关系简报等（后期阶段）</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="边界">
+      <div class="slide-inner">
+        <div class="kicker">场景边界 · 选型理由</div>
+        <div class="grid-2">
+          <div class="card" style="animation-delay:0.08s">
+            <h3>边界</h3>
+            <p>白名单：Wikipedia、官方页、公开人物介绍、少量媒体；<strong style="color:var(--ink)">仅公开可验证信息</strong>；不争辩主观立场；争议关系进人工确认。</p>
+          </div>
+          <div class="card" style="animation-delay:0.12s">
+            <h3>为何选此场景</h3>
+            <p>数据公开利于快验主链路；关系复杂能展示本体+图谱；分析师有真实需求；演示叙事清晰。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="架构">
+      <div class="slide-inner">
+        <div class="kicker">二、技术架构（精简）</div>
+        <p class="lead"><strong style="color:var(--ink)">Next.js</strong>（对话 / 对象浏览 / D3·force-graph） ⟷ <strong style="color:var(--ink)">FastAPI</strong>：Ontology Engine + Agent Engine + Action/Function Runtime + NL Interface；<strong style="color:var(--acc)">Redis + Celery</strong> 异步采集；<strong style="color:var(--acc2)">PostgreSQL 单库</strong>（JSONB + 递归 CTE，MVP 不引入 Neo4j）。</p>
+        <pre class="ascii">Next.js  UI  ←REST/WS→  FastAPI
+  Ontology Engine | Agent | Action/Fn | NL Layer
+           Redis + Celery（任务/进度/重试）
+  PostgreSQL：types / objects / links / raw_sources /
+             entity_candidates / review_queue / action_logs</pre>
+      </div>
+    </section>
+
+    <section class="slide" data-title="选型与提取">
+      <div class="slide-inner">
+        <div class="kicker">选型 · 页面提取 · Neo4j</div>
+        <table class="data">
+          <thead><tr><th>项</th><th>要点</th></tr></thead>
+          <tbody>
+            <tr><td>栈</td><td>Python+FastAPI（LLM 生态）；Next.js；Claude 主 / GPT-4o 备</td></tr>
+            <tr><td>静态页</td><td>httpx + BeautifulSoup → LLM 提取</td></tr>
+            <tr><td>JS 渲染</td><td>按需 Playwright；白名单标注站点</td></tr>
+            <tr><td>迁 Neo4j</td><td>≤3 跳 &gt;500ms 调优无效；或点/边规模巨大；或 ≥4 跳/图算法</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide" data-title="自然语言查询">
+      <div class="slide-inner">
+        <div class="kicker">三、自然语言查询</div>
+        <div class="grid-2">
+          <div class="card"><h3>① 结构化过滤</h3><p>例：「共和党内阁成员」→ LLM 转条件 → 属性查询。<strong style="color:var(--ink)">MVP 必做</strong></p></div>
+          <div class="card"><h3>② 语义相似</h3><p>向量化 + pgvector 检索。<strong style="color:var(--acc2)">可选增强</strong>（视 P3 进度）</p></div>
+          <div class="card"><h3>③ 图关系</h3><p>一跳/多跳、路径 → 图遍历。<strong style="color:var(--ink)">MVP 必做</strong></p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="可信机制">
+      <div class="slide-inner">
+        <div class="kicker">四、可信机制（必做）</div>
+        <p class="lead">非「抓完即真」—— <strong style="color:var(--ink)">自动提取 + 可追溯 + 可审核</strong>。</p>
+        <ul class="points">
+          <li>元数据：来源 URL/站点、抓取时间、置信度、人工确认、原始片段</li>
+          <li>管道：<code style="color:var(--acc)">raw_sources</code> → 候选 <code style="color:var(--acc)">entity_candidates</code> → 确认 → <code style="color:var(--acc)">objects/links</code></li>
+          <li>冲突：不自动覆盖高可信已确认；争议进 <code style="color:var(--acc2)">review_queue</code>；展示「采用值 + 来源」</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="审核队列">
+      <div class="slide-inner">
+        <div class="kicker">审核队列 UI（P1 必做）</div>
+        <h2>高效、少填表</h2>
+        <ul class="points">
+          <li>列表 + 详情分栏；筛选：低置信 / 冲突 / 新实体</li>
+          <li>一键确认/拒绝；冲突字段并排高亮 — <strong style="color:var(--ink)">选策略而非手写</strong></li>
+          <li>快捷键：<strong style="color:var(--acc)">J/K</strong> 导航，<strong style="color:var(--acc)">Y/N</strong> 通过/拒绝</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Prompt">
+      <div class="slide-inner">
+        <div class="kicker">五、Prompt 管理</div>
+        <p class="lead"><code style="color:var(--acc)">prompts/</code> 分 agent / nl_interface / action；YAML：name、version、model、temperature、system、user_template、few_shots。</p>
+        <ul class="points">
+          <li>迭代 <strong style="color:var(--ink)">递增版本</strong>（v1→v2），旧版保留；验证集对比后再切生产</li>
+          <li>代码引用指定版本，便于回滚</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="阶段 P1">
+      <div class="slide-inner">
+        <div class="kicker">六 · P1 地基（第 1–2 周）</div>
+        <h2>能存、能看、能审核</h2>
+        <ul class="points">
+          <li>PostgreSQL Schema；Ontology API（types / objects / links / 查询与详情）</li>
+          <li>Redis+Celery 打底；前端：对象列表、详情（属性+关系+来源）、审核队列</li>
+          <li>种子数据 10–20 人手录特朗普圈，跑通闭环</li>
+          <li><strong style="color:var(--acc2)">验收</strong>：手动建模浏览可见来源；队列可确认/拒绝</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="阶段 P2">
+      <div class="slide-inner">
+        <div class="kicker">P2 Agent 大脑（第 3–5 周）<span class="star"> ⭐</span></div>
+        <h2>自动采集 → 候选 → 确认入库</h2>
+        <ul class="points">
+          <li>规划器、白名单提取（静态/Playwright）、本体建议、清洗去重、候选管道</li>
+          <li>API：<code style="color:var(--acc)">POST /agent/collect</code>、任务进度、确认推断</li>
+          <li>前端：意图输入、流式进度、推断确认、结果与来源摘要</li>
+          <li><strong style="color:var(--acc2)">验收</strong>：一句「收集内阁成员」可走通白名单采集与入库</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="阶段 P3">
+      <div class="slide-inner">
+        <div class="kicker">P3（第 6–7 周）</div>
+        <h2>图谱 + 自然语言问答</h2>
+        <ul class="points">
+          <li>关系图：中心展开、点击下层、类型配色、缩放拖拽搜索</li>
+          <li>NL：属性过滤；一跳/两跳；基础路径；结果卡片与迷你图</li>
+          <li><strong style="color:var(--acc2)">验收</strong>：核心网络可视；过滤与关系类问题答对</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide" data-title="阶段 P4 P5">
+      <div class="slide-inner">
+        <div class="kicker">P4 · P5</div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>P4（8–9 周）能操作</h3>
+            <p>Action：打标签、关系简报；Function：路径 ≤3 跳、影响力排序；NL + 按钮触发。</p>
+            <p style="margin-top:0.5rem"><strong style="color:var(--ink)">验收</strong>：NL 打标签/简报；路径与 Top 影响力可查。</p>
+          </div>
+          <div class="card">
+            <h3>P5（第 10 周）打磨演示</h3>
+            <p>扩充 50–100 人、关系与标签；流式 Agent、图谱与性能；<strong style="color:var(--ink)">3 分钟演示脚本</strong>；政治人物本体模板沉淀。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="里程碑">
+      <div class="slide-inner">
+        <div class="kicker">七、里程碑</div>
+        <table class="data">
+          <thead><tr><th>周末</th><th>检查点</th><th>意义</th></tr></thead>
+          <tbody>
+            <tr><td>2</td><td>手录全流程 + 审核队列</td><td>地基</td></tr>
+            <tr><td>5</td><td>Agent → 候选入库</td><td><strong style="color:var(--acc2)">最关键 Demo</strong></td></tr>
+            <tr><td>7</td><td>图谱 + 问答</td><td>内部分享</td></tr>
+            <tr><td>9</td><td>Action 可用</td><td>功能闭环</td></tr>
+            <tr><td>10</td><td>演示就绪</td><td>对外</td></tr>
+          </tbody>
+        </table>
+        <p class="lead" style="margin-top:0.75rem;font-size:0.95rem">甘特：<strong style="color:var(--ink)">P1</strong> 第1–2周 · <strong style="color:var(--ink)">P2</strong> 第3–5周 · <strong style="color:var(--ink)">P3</strong> 第6–7周 · <strong style="color:var(--ink)">P4</strong> 第8–9周 · <strong style="color:var(--ink)">P5</strong> 第10周。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="技术风险">
+      <div class="slide-inner">
+        <div class="kicker">八、技术风险</div>
+        <table class="data">
+          <thead><tr><th>风险</th><th>应对</th></tr></thead>
+          <tbody>
+            <tr><td>反爬封锁</td><td>友好源优先；间隔；备用数据源</td></tr>
+            <tr><td>LLM 提取不准</td><td>人工审核；few-shot；保留 raw 可追溯</td></tr>
+            <tr><td>Playwright 复杂度</td><td>MVP 先静态；JS 站点按需引入</td></tr>
+            <tr><td>争议数据伤信任</td><td>白名单；争议不入库；展示来源与确认态</td></tr>
+            <tr><td>大图卡顿</td><td>单次 ≤200 节点；分层加载</td></tr>
+            <tr><td>单人进度</td><td>严格砍范围不砍质量；AI 辅助编码</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide" data-title="评估与回退">
+      <div class="slide-inner">
+        <div class="kicker">九、评估 · 验证集 · 回退</div>
+        <table class="data">
+          <thead><tr><th>MVP 指标</th><th>目标</th></tr></thead>
+          <tbody>
+            <tr><td>单次采集任务成功率</td><td>≥ 70%</td></tr>
+            <tr><td>人物基础属性准确率</td><td>≥ 80%</td></tr>
+            <tr><td>关系识别准确率</td><td>≥ 70%</td></tr>
+            <tr><td>候选人工确认通过率</td><td>≥ 60%</td></tr>
+            <tr><td>意图 → 首次可浏览</td><td>≤ 3 分钟</td></tr>
+            <tr><td>图谱首屏（≤100 节点）</td><td>≤ 2 秒</td></tr>
+          </tbody>
+        </table>
+        <p class="lead" style="margin-top:0.85rem;font-size:0.92rem">验证集：20–30 标准人物 + 基准字段；<strong style="color:var(--ink)">每周抽样</strong>对比 Prompt 版本。<strong style="color:var(--acc2)">回退</strong>：若第5周前全自动不稳 → 系统给建议 URL → 用户确认 URL → Agent 仅对确认 URL 提取 → 再审核入库。</p>
+      </div>
+    </section>
+
+    <section class="slide" data-title="开发策略">
+      <div class="slide-inner">
+        <div class="kicker">十、1 人 + AI</div>
+        <h2>人负责决策与质量，AI 放大产出</h2>
+        <div class="grid-2">
+          <div class="card" style="animation-delay:0.08s">
+            <h3>人</h3>
+            <p>架构、Agent 核心逻辑、Prompt、数据质量、体验、反馈。</p>
+          </div>
+          <div class="card" style="animation-delay:0.12s">
+            <h3>AI 辅助</h3>
+            <p>CRUD/API、组件、Schema/迁移、测试、调试重构、文档。</p>
+          </div>
+        </div>
+        <ul class="points">
+          <li>每阶段结束须<strong style="color:var(--ink)">可运行交付</strong>，拒绝半残功能堆量</li>
+          <li>Agent 是卖点：流程与 Prompt 持续打磨；版本化 + 验证集量化</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <span class="nav-hint">← 上一页 · 下一页 →</span>
+    <div class="dots" id="dots"></div>
+    <span class="counter"><span id="cur">1</span> / <span id="total">0</span></span>
+  </div>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const deck = document.getElementById("deck");
+      const dotsEl = document.getElementById("dots");
+      const curEl = document.getElementById("cur");
+      const totalEl = document.getElementById("total");
+      let idx = 0;
+      totalEl.textContent = String(slides.length);
+
+      slides.forEach((_, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "dot" + (i === 0 ? " on" : "");
+        b.setAttribute("aria-label", "第 " + (i + 1) + " 页");
+        b.addEventListener("click", () => go(i));
+        dotsEl.appendChild(b);
+      });
+
+      const dots = () => Array.from(dotsEl.querySelectorAll(".dot"));
+
+      function go(n) {
+        idx = Math.max(0, Math.min(slides.length - 1, n));
+        slides.forEach((s, i) => s.classList.toggle("active", i === idx));
+        dots().forEach((d, i) => d.classList.toggle("on", i === idx));
+        curEl.textContent = String(idx + 1);
+        const t = slides[idx].getAttribute("data-title") || "";
+        document.title = t ? t + " — MVP 实施报告" : "数据自治平台 MVP — 实施报告幻灯片";
+      }
+
+      function next() { go(idx + 1); }
+      function prev() { go(idx - 1); }
+
+      document.getElementById("hitNext").addEventListener("click", next);
+      document.getElementById("hitPrev").addEventListener("click", prev);
+      ["hitNext", "hitPrev"].forEach((id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            el.click();
+          }
+        });
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+          e.preventDefault();
+          next();
+        } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+          e.preventDefault();
+          prev();
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          go(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          go(slides.length - 1);
+        }
+      });
+
+      let tx = 0;
+      deck.addEventListener("touchstart", (e) => { tx = e.changedTouches[0].screenX; }, { passive: true });
+      deck.addEventListener("touchend", (e) => {
+        const dx = e.changedTouches[0].screenX - tx;
+        if (dx > 50) prev();
+        else if (dx < -50) next();
+      }, { passive: true });
+    })();
+  </script>
+</body>
+</html>

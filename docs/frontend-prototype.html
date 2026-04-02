@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ontology Platform - Intelligence Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #030508;
+      --bg-panel: #080c14;
+      --bg-panel-hover: #0d1420;
+      --border: #152436;
+      --border-light: #243b55;
+      --text-main: #c2d3e4;
+      --text-muted: #5b738b;
+      --accent-agent: #00e5ff;
+      --accent-agent-dim: rgba(0, 229, 255, 0.15);
+      --accent-ontology: #b562ff;
+      --accent-warn: #ffaa00;
+      --accent-warn-dim: rgba(255, 170, 0, 0.15);
+      --accent-danger: #ff3366;
+      --accent-success: #00ff9d;
+      
+      --font-display: 'Rajdhani', sans-serif;
+      --font-body: 'Sora', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* CRT / Scanline Effects */
+    .scanlines {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+    
+    .vignette {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%);
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    /* Top Navigation */
+    .topbar {
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(8, 12, 20, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 12px;
+      height: 12px;
+      background: var(--accent-agent);
+      box-shadow: 0 0 10px var(--accent-agent);
+      animation: pulse 2s infinite;
+    }
+
+    .top-nav {
+      display: flex;
+      gap: 32px;
+    }
+
+    .nav-item {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: color 0.3s;
+      position: relative;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: var(--accent-agent);
+    }
+
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--accent-agent);
+      box-shadow: 0 -2px 8px var(--accent-agent);
+    }
+
+    .sys-status {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-success);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Main Layout */
+    .app-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .panel-header {
+      height: 40px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(0,0,0,0.2);
+    }
+
+    /* Left: Command Center */
+    .command-center {
+      width: 320px;
+      min-width: 320px;
+    }
+
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      animation: slideIn 0.3s ease-out forwards;
+    }
+
+    .msg-user .msg-bubble {
+      background: var(--border);
+      color: #fff;
+      padding: 12px;
+      border-radius: 4px 4px 4px 0;
+      border-left: 2px solid var(--text-muted);
+    }
+
+    .msg-agent .msg-bubble {
+      background: var(--accent-agent-dim);
+      color: var(--accent-agent);
+      padding: 12px;
+      border-radius: 4px 4px 0 4px;
+      border-right: 2px solid var(--accent-agent);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .agent-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+
+    .agent-step.done {
+      color: var(--accent-success);
+    }
+
+    .agent-step.active {
+      color: var(--accent-agent);
+    }
+
+    .spinner {
+      width: 10px;
+      height: 10px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .command-input {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-base);
+    }
+
+    .input-box {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border-light);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 12px;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .input-box:focus {
+      border-color: var(--accent-agent);
+      box-shadow: 0 0 10px var(--accent-agent-dim);
+    }
+
+    /* Center: Main Stage (Review Queue / Graph) */
+    .center-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at center, #0a111a 0%, var(--bg-base) 100%);
+    }
+
+    /* Review Queue Styles */
+    .review-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .candidate-list {
+      width: 350px;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    .candidate-filters {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .filter-btn.active {
+      background: var(--accent-warn-dim);
+      color: var(--accent-warn);
+      border-color: var(--accent-warn);
+    }
+
+    .candidate-item {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+    }
+
+    .candidate-item:hover {
+      background: var(--bg-panel-hover);
+    }
+
+    .candidate-item.selected {
+      background: rgba(255, 170, 0, 0.08);
+      border-left: 3px solid var(--accent-warn);
+    }
+
+    .cand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .cand-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .cand-type {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      background: rgba(181, 98, 255, 0.15);
+      color: var(--accent-ontology);
+      border-radius: 2px;
+    }
+
+    .cand-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cand-alert {
+      color: var(--accent-warn);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    .detail-header {
+      margin-bottom: 32px;
+    }
+
+    .detail-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .source-link {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-agent);
+      text-decoration: none;
+    }
+
+    .source-link:hover {
+      text-decoration: underline;
+    }
+
+    .conflict-section {
+      background: rgba(255, 170, 0, 0.03);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      border-radius: 4px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-warn);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      display: block;
+      width: 12px;
+      height: 2px;
+      background: var(--accent-warn);
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .diff-card {
+      background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      padding: 16px;
+      border-radius: 4px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .diff-card:hover {
+      border-color: var(--text-muted);
+    }
+
+    .diff-card.selected {
+      border-color: var(--accent-success);
+      box-shadow: 0 0 15px rgba(0, 255, 157, 0.1);
+    }
+
+    .diff-card.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      color: var(--accent-success);
+      font-weight: bold;
+    }
+
+    .diff-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .diff-value {
+      font-size: 16px;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .diff-source {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 16px;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-approve {
+      background: var(--accent-success);
+      color: #000;
+    }
+
+    .btn-approve:hover {
+      box-shadow: 0 0 20px rgba(0, 255, 157, 0.4);
+    }
+
+    .btn-reject {
+      background: transparent;
+      border: 1px solid var(--accent-danger);
+      color: var(--accent-danger);
+    }
+
+    .btn-reject:hover {
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    .shortcut-hint {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      opacity: 0.6;
+      border: 1px solid currentColor;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+
+    /* Graph View (Hidden by default in this mock) */
+    .graph-view {
+      display: none;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .graph-view.active {
+      display: block;
+    }
+
+    .node {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--bg-panel);
+      border: 2px solid var(--accent-agent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: var(--font-display);
+      font-weight: 600;
+      box-shadow: 0 0 20px var(--accent-agent-dim);
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .node:hover {
+      transform: scale(1.1);
+      border-color: #fff;
+      z-index: 10;
+    }
+
+    .node-trump { width: 80px; height: 80px; top: 40%; left: 45%; border-color: var(--accent-warn); box-shadow: 0 0 30px var(--accent-warn-dim); }
+    .node-musk { width: 60px; height: 60px; top: 20%; left: 60%; }
+    .node-vance { width: 60px; height: 60px; top: 60%; left: 30%; }
+    .node-rubio { width: 60px; height: 60px; top: 65%; left: 65%; }
+
+    .edge {
+      position: absolute;
+      background: var(--border-light);
+      height: 2px;
+      transform-origin: 0 50%;
+      z-index: 0;
+    }
+
+    .edge-label {
+      position: absolute;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--accent-ontology);
+      background: var(--bg-base);
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      z-index: 1;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0% { opacity: 0.5; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 0.5; transform: scale(0.95); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <!-- Top Navigation -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon"></div>
+      ONTOLOGY_OS
+    </div>
+    <nav class="top-nav">
+      <div class="nav-item" onclick="switchTab('graph')">Knowledge Graph</div>
+      <div class="nav-item active" onclick="switchTab('review')">Review Queue <span style="color:var(--accent-warn)">[23]</span></div>
+      <div class="nav-item">Ontology Schema</div>
+    </nav>
+    <div class="sys-status">
+      <span class="spinner" style="display:none" id="global-spinner"></span>
+      SYS.ONLINE // AGENT.IDLE
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- Left Panel: Command Center -->
+    <aside class="panel command-center">
+      <div class="panel-header">Terminal // Agent.Command</div>
+      <div class="chat-log" id="chat-log">
+        <div class="msg msg-user">
+          <div class="msg-bubble">帮我收集特朗普第二任期的内阁成员和核心顾问信息。</div>
+        </div>
+        <div class="msg msg-agent">
+          <div class="msg-bubble">
+            > INTENT_PARSED: Collect entities [Type: Person, Org] related to "Trump 2nd Term Cabinet/Advisors"<br><br>
+            <div class="agent-step done">✓ 规划爬取策略 (Sources: Wikipedia, Gov Sites)</div>
+            <div class="agent-step done">✓ 提取结构化数据 (Found 45 candidates)</div>
+            <div class="agent-step done">✓ 推断本体结构 & 关系</div>
+            <div class="agent-step done">✓ 冲突检测 (Found 8 conflicts)</div>
+            <br>
+            > ACTION_REQ: 23 entities require manual review before committing to Ontology.
+          </div>
+        </div>
+      </div>
+      <div class="command-input">
+        <input type="text" class="input-box" placeholder="Enter natural language command..." id="cmd-input">
+      </div>
+    </aside>
+
+    <!-- Center Stage -->
+    <main class="panel center-stage">
+      
+      <!-- View: Review Queue -->
+      <div class="review-layout" id="view-review">
+        <!-- Candidate List -->
+        <div class="candidate-list">
+          <div class="panel-header">Entity Candidates</div>
+          <div class="candidate-filters">
+            <button class="filter-btn">All</button>
+            <button class="filter-btn active">Conflicts (8)</button>
+            <button class="filter-btn">Low Conf (15)</button>
+          </div>
+          
+          <div class="candidate-item selected">
+            <div class="cand-header">
+              <span class="cand-title">Elon Musk</span>
+              <span class="cand-type">Object: Person</span>
+            </div>
+            <div class="cand-meta">
+              <span>Confidence: 0.82</span>
+              <span>Source: Wikipedia, WSJ</span>
+            </div>
+            <div class="cand-alert">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Attribute Conflict Detected
+            </div>
+          </div>
+
+          <div class="candidate-item">
+            <div class="cand-header">
+              <span class="cand-title">Musk → DOGE</span>
+              <span class="cand-type">Link: Appointed_To</span>
+            </div>
+            <div class="cand-meta">
+              <span>Confidence: 0.95</span>
+              <span>Source: Official Announcement</span>
+            </div>
+            <div class="cand-alert" style="color: var(--accent-success)">
+              New Relationship
+            </div>
+          </div>
+          
+          <div class="candidate-item">
+            <div class="cand-header">
+              <span class="cand-title">Marco Rubio</span>
+              <span class="cand-type">Object: Person</span>
+            </div>
+            <div class="cand-meta">
+              <span>Confidence: 0.71</span>
+              <span>Source: News Media</span>
+            </div>
+            <div class="cand-alert">
+              Attribute Conflict Detected
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Panel -->
+        <div class="detail-panel">
+          <div class="detail-header">
+            <div class="cand-type" style="display:inline-block; margin-bottom:12px;">Object: Person</div>
+            <h2 class="detail-title">Elon Musk</h2>
+            <a href="#" class="source-link">↗ View Extracted Sources (3)</a>
+          </div>
+
+          <div class="conflict-section">
+            <div class="section-title">Resolve Conflict: Role / Position</div>
+            
+            <div class="diff-grid">
+              <div class="diff-card" onclick="selectCard(this)">
+                <div class="diff-label">Existing Data (Ontology)</div>
+                <div class="diff-value">CEO of Tesla, SpaceX</div>
+                <div class="diff-source">Last verified: 2024-01-15</div>
+              </div>
+              
+              <div class="diff-card selected" onclick="selectCard(this)">
+                <div class="diff-label">New Extraction (Agent)</div>
+                <div class="diff-value">Co-lead of Dept of Government Efficiency (DOGE)</div>
+                <div class="diff-source">Source: WSJ (2024-11-13)<br>Confidence: 0.98</div>
+              </div>
+            </div>
+            
+            <div class="diff-card" onclick="selectCard(this)" style="width: 100%">
+              <div class="diff-label">Merge Strategy</div>
+              <div class="diff-value">Merge as Array: ["CEO of Tesla, SpaceX", "Co-lead of DOGE"]</div>
+            </div>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+            Other attributes (Auto-merged):<br>
+            - Political Affiliation: Republican (Confirmed)<br>
+            - Net Worth: $300B+ (Updated)
+          </div>
+
+          <div class="action-bar">
+            <button class="btn btn-approve">
+              Approve Entity <span class="shortcut-hint">Y</span>
+            </button>
+            <button class="btn btn-reject">
+              Reject <span class="shortcut-hint">N</span>
+            </button>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px;">
+              <span>Use <span class="shortcut-hint">J</span> <span class="shortcut-hint">K</span> to navigate list</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: Graph -->
+      <div class="graph-view" id="view-graph">
+        <div class="panel-header" style="position:absolute; top:0; left:0; width:100%; z-index:10; background: rgba(8,12,20,0.8); backdrop-filter: blur(5px); border-bottom: 1px solid var(--border);">
+          Graph Explorer // Depth: 2 // Center: Trump
+        </div>
+        
+        <!-- Fake edges -->
+        <div class="edge" style="width: 180px; top: 44%; left: 49%; transform: rotate(-45deg);"></div>
+        <div class="edge-label" style="top: 32%; left: 55%;">Ally / Appointed</div>
+
+        <div class="edge" style="width: 150px; top: 44%; left: 34%; transform: rotate(140deg);"></div>
+        <div class="edge-label" style="top: 52%; left: 36%;">VP Pick</div>
+
+        <div class="edge" style="width: 200px; top: 44%; left: 49%; transform: rotate(45deg);"></div>
+        <div class="edge-label" style="top: 55%; left: 58%;">Sec of State</div>
+
+        <!-- Fake nodes -->
+        <div class="node node-trump">Trump</div>
+        <div class="node node-musk">Musk</div>
+        <div class="node node-vance">Vance</div>
+        <div class="node node-rubio">Rubio</div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Simple interactions for the prototype
+    function selectCard(element) {
+      // Remove selected class from siblings in the same grid/container
+      const siblings = element.parentElement.querySelectorAll('.diff-card');
+      siblings.forEach(el => el.classList.remove('selected'));
+      
+      // If it's the merge strategy card (standalone), remove from grid too
+      if(element.parentElement.classList.contains('conflict-section')) {
+         element.parentElement.querySelectorAll('.diff-card').forEach(el => el.classList.remove('selected'));
+      } else {
+         element.closest('.conflict-section').querySelector('.diff-card[style]').classList.remove('selected');
+      }
+
+      element.classList.add('selected');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if(tab === 'review') {
+        document.getElementById('view-review').classList.add('active');
+        document.getElementById('view-graph').classList.remove('active');
+      } else if (tab === 'graph') {
+        document.getElementById('view-review').classList.remove('active');
+        document.getElementById('view-graph').classList.add('active');
+      }
+    }
+
+    // Simulate chat command
+    document.getElementById('cmd-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && this.value.trim() !== '') {
+        const log = document.getElementById('chat-log');
+        
+        // Add user msg
+        const userMsg = document.createElement('div');
+        userMsg.className = 'msg msg-user';
+        userMsg.innerHTML = `<div class="msg-bubble">${this.value}</div>`;
+        log.appendChild(userMsg);
+        
+        const cmd = this.value;
+        this.value = '';
+        
+        // Simulate Agent response
+        setTimeout(() => {
+          document.getElementById('global-spinner').style.display = 'block';
+          document.querySelector('.sys-status').innerHTML = '<span class="spinner"></span> SYS.ONLINE // AGENT.WORKING';
+          
+          const agentMsg = document.createElement('div');
+          agentMsg.className = 'msg msg-agent';
+          agentMsg.innerHTML = `
+            <div class="msg-bubble">
+              > PARSING INTENT...<br>
+              <div class="agent-step active"><span class="spinner"></span> Executing Function: Graph Traversal</div>
+            </div>
+          `;
+          log.appendChild(agentMsg);
+          log.scrollTop = log.scrollHeight;
+
+          setTimeout(() => {
+            agentMsg.innerHTML = `
+            <div class="msg-bubble">
+              > QUERY: "${cmd}"<br><br>
+              <div class="agent-step done">✓ Ontology Engine queried</div>
+              <br>
+              > RESULT: Switched view to Knowledge Graph. Highlighted relevant nodes.
+            </div>
+            `;
+            document.getElementById('global-spinner').style.display = 'none';
+            document.querySelector('.sys-status').innerHTML = 'SYS.ONLINE // AGENT.IDLE';
+            switchTab('graph');
+            // Force active state on nav
+            document.querySelectorAll('.nav-item')[0].classList.add('active');
+            document.querySelectorAll('.nav-item')[1].classList.remove('active');
+          }, 1500);
+
+        }, 500);
+      }
+    });
+  </script>
+</body>
+</html>
